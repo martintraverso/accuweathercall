@@ -1,1 +1,13 @@
-# accuweathercall
+[
+	{
+		"name": "Country Name",
+		"flag": ":emoji-flag:",
+		"cities": [{
+				"name": "City Name",
+				"code": "City-code"
+			}
+            ...
+		]
+	}
+    ...
+]
