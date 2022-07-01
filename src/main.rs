@@ -98,6 +98,7 @@ async fn main() {
                 println!("Tan cerca... pero tan lejos. Algo en las estructuras está mal. Quizá nunca debiste ponerte a estudiar RUST. Cagón!");
             }
         }
+        println!();
     }
 }
 
@@ -123,7 +124,7 @@ async fn call_api(code:&String, api_key:&String) -> Result<Weather, reqwest::Err
     Ok(data)
 }
 
-fn convert_icon(icon: i32) -> String {
+pub fn convert_icon(icon: i32) -> String {
    
     let final_icon =  match icon {
         1..=5 => ":soleado:",
@@ -154,4 +155,12 @@ fn convert_icon(icon: i32) -> String {
     };
 
     return final_icon.to_string();
+}
+
+#[test]
+fn convert_icon_return_correctly() {
+    let icon = convert_icon(4);
+    let icon2 = convert_icon(36);
+    assert_eq!(icon, ":soleado:");
+    assert_eq!(icon2, ":nube:");
 }
