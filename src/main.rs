@@ -1,7 +1,11 @@
-use std::env;
-use std::fs::File;
 use serde::{Serialize, Deserialize};
-use std::string::String;
+use std::{
+    env,
+    fs::File,
+    io::{self, ErrorKind},
+    path::Path,
+    string::String
+};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct City {
@@ -77,9 +81,9 @@ async fn main() {
     let key = &args[1];
     let path = &args[2];
 
-    let countries: Vec<Country> = get_list(path.to_string());
+    let countries: Result<Vec<Country>, io::Error> = get_list(&path);
 
-    for country in countries {
+    for country in countries.unwrap() {
         println!("{} {}", country.name, country.flag);
         for city in country.cities {
             println!("{}", city.name);            
@@ -103,10 +107,21 @@ async fn main() {
 }
 
 // Get all the city and countrie data outside of the program
-fn get_list(path:String) -> Vec<Country> {
+fn get_list(path: &String) -> Result<Vec<Country>, io::Error> {
+
+    let real_path = Path::new(path);
+
+    if !real_path.is_file() {
+        let not_a_file_error = io::Error::new(
+            ErrorKind::InvalidInput,
+            format!("Not a file: {}", real_path.display()),
+        );
+        return Err(not_a_file_error);
+    }
+
     let file = File::open(path).expect("El archivo debería permitir la lectura.");
     let json: Vec<Country> = serde_json::from_reader(file).expect("Pensá un poquito... capaz que no colocaste la ruta correctamente o peñarol peñarol.");
-    return json;
+    Ok(json)
 }
 
 // This is the call to the api. 
@@ -166,5 +181,12 @@ mod test{
         let icon2 = convert_icon(36);
         assert_eq!(icon, ":soleado:");
         assert_eq!(icon2, ":nube:");
+    }
+
+    #[test]
+    fn throw_error_if_file_path_is_incorrect() {
+        let path = String::from("/what/is/this/route");
+        let result = get_list(&path);
+        assert!(result.is_err());
     }
 }
