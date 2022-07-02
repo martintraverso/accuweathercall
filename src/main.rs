@@ -157,10 +157,14 @@ pub fn convert_icon(icon: i32) -> String {
     return final_icon.to_string();
 }
 
-#[test]
-fn convert_icon_return_correctly() {
-    let icon = convert_icon(4);
-    let icon2 = convert_icon(36);
-    assert_eq!(icon, ":soleado:");
-    assert_eq!(icon2, ":nube:");
+#[cfg(test)]
+mod test{
+    use super::*;
+    #[test]
+    fn convert_icon_return_correctly() {
+        let icon = convert_icon(4);
+        let icon2 = convert_icon(36);
+        assert_eq!(icon, ":soleado:");
+        assert_eq!(icon2, ":nube:");
+    }
 }
