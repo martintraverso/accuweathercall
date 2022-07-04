@@ -99,7 +99,7 @@ async fn main() {
                 println!("Más información: {}", w.daily_forecasts[0].link);
                 println!("***************************");
             } else {
-                println!("Tan cerca... pero tan lejos. Algo en las estructuras está mal. Quizá nunca debiste ponerte a estudiar RUST. Cagón!");
+                println!("Something happend when calling API, Possible due to bad credentials.");
             }
         }
         println!();
@@ -119,8 +119,8 @@ fn get_list(path: &String) -> Result<Vec<Country>, io::Error> {
         return Err(not_a_file_error);
     }
 
-    let file = File::open(path).expect("El archivo debería permitir la lectura.");
-    let json: Vec<Country> = serde_json::from_reader(file).expect("Pensá un poquito... capaz que no colocaste la ruta correctamente o peñarol peñarol.");
+    let file = File::open(path).expect("File should be readable.");
+    let json: Vec<Country> = serde_json::from_reader(file).expect("Bad format of file.");
     Ok(json)
 }
 
@@ -139,7 +139,7 @@ async fn call_api(code:&String, api_key:&String) -> Result<Weather, reqwest::Err
     Ok(data)
 }
 
-pub fn convert_icon(icon: i32) -> String {
+fn convert_icon(icon: i32) -> String {
    
     let final_icon =  match icon {
         1..=5 => ":soleado:",
