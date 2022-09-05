@@ -1,15 +1,16 @@
 use serde::{Serialize, Deserialize};
+use chrono::{DateTime, Utc};
 use std::{
     env,
     fs::File,
     io::{self, ErrorKind},
-    path::Path,
+    path::{Path},
     string::String
 };
 
 #[derive(Debug, Serialize, Deserialize)]
 struct City {
-    name : String,  
+    name : String,
     code: String
 }
 
@@ -44,7 +45,7 @@ struct DailyForecasts {
     night: Day,
     #[serde(rename = "Temperature")]
     temperature : Temperature,
-    #[serde(rename = "Link")] 
+    #[serde(rename = "Link")]
     link: String
 }
 
@@ -58,19 +59,19 @@ struct Day {
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Temperature {
-    #[serde(rename = "Minimum")] 
+    #[serde(rename = "Minimum")]
     minimum: TemperatureValue,
-    #[serde(rename = "Maximum")] 
+    #[serde(rename = "Maximum")]
     maximum: TemperatureValue
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 struct TemperatureValue {
-    #[serde(rename = "Value")] 
+    #[serde(rename = "Value")]
     value: f32,
-    #[serde(rename = "Unit")] 
+    #[serde(rename = "Unit")]
     unit: String,
-    #[serde(rename = "UnitType")] 
+    #[serde(rename = "UnitType")]
     unit_type: u32,
 }
 
@@ -83,27 +84,59 @@ async fn main() {
 
     let countries: Result<Vec<Country>, io::Error> = get_list(&path);
 
+    let now: DateTime<Utc> = Utc::now();
+
     for country in countries.unwrap() {
         println!("{} {}", country.name, country.flag);
         for city in country.cities {
-            println!("{}", city.name);            
-            if let Ok(w) = call_api(&city.code, &key).await {
-                println!("{}", w.headline.text);
-                println!("Máxima: {} | Mínima:{}",w.daily_forecasts[0].temperature.maximum.value, w.daily_forecasts[0].temperature.minimum.value);
-                println!("Día {} ({}) | Noche {} ({})", 
-                    convert_icon(w.daily_forecasts[0].day.icon), 
-                    w.daily_forecasts[0].day.icon_phrase, 
-                    convert_icon(w.daily_forecasts[0].night.icon),
-                    w.daily_forecasts[0].night.icon_phrase,
-                );
-                println!("Más información: {}", w.daily_forecasts[0].link);
-                println!("***************************");
-            } else {
-                println!("Something happend when calling API, Possible due to bad credentials.");
+            println!("{}", city.name);
+
+            // This can not be ok. 
+            // @todo investigate how format! can do the work here.
+            let mut path = "share/".to_owned();
+            path.push_str(&now.format("%Y").to_string());
+            path.push_str("/");
+            path.push_str(&now.format("%a").to_string());
+            path.push_str("/");
+            path.push_str(&now.format("%d").to_string());
+            path.push_str("/");
+            path.push_str(&city.code);
+            path.push_str(".json");
+            
+            if  Path::new(&path).exists() {
+                let file = File::open(path).expect("File should be readable.");
+                let w: Weather = serde_json::from_reader(file).expect("Bad format of file.");
+                print_the_weather(&w);
+            } else {                
+                if let Ok(w) = call_api(&city.code, &key).await {
+                    print_the_weather(&w);
+                    let destination = std::path::Path::new(&path);
+                    let prefix = destination.parent().unwrap();
+                    std::fs::create_dir_all(prefix).unwrap();
+                    std::fs::write(
+                        path.to_string(),
+                        serde_json::to_string_pretty(&w).expect("msg"),
+                    ).unwrap();
+                } else {
+                    println!("Something happend when calling API, Possible due to bad credentials.");
+                }
             }
         }
         println!();
     }
+}
+
+fn print_the_weather(w: &Weather) {
+    println!("{}", w.headline.text);
+    println!("Máxima: {} C| Mínima: {} C",w.daily_forecasts[0].temperature.maximum.value, w.daily_forecasts[0].temperature.minimum.value);
+    println!("Día {} ({}) | Noche {} ({})",
+        convert_icon(w.daily_forecasts[0].day.icon),
+        w.daily_forecasts[0].day.icon_phrase,
+        convert_icon(w.daily_forecasts[0].night.icon),
+            w.daily_forecasts[0].night.icon_phrase,
+    );
+    println!("Más información: {}", w.daily_forecasts[0].link);
+    println!("***************************");
 }
 
 // Get all the city and countrie data outside of the program
@@ -124,11 +157,12 @@ fn get_list(path: &String) -> Result<Vec<Country>, io::Error> {
     Ok(json)
 }
 
-// This is the call to the api. 
+// This is the call to the api.
 async fn call_api(code:&String, api_key:&String) -> Result<Weather, reqwest::Error> {
+
     let url = format!(
-        "http://dataservice.accuweather.com/forecasts/v1/daily/1day/{}?apikey={}&language=es-ES&metric=true", 
-        code, 
+        "http://dataservice.accuweather.com/forecasts/v1/daily/1day/{}?apikey={}&language=es-ES&metric=true",
+        code,
         api_key);
 
     let data = reqwest::get(url)
@@ -140,7 +174,7 @@ async fn call_api(code:&String, api_key:&String) -> Result<Weather, reqwest::Err
 }
 
 fn convert_icon(icon: i32) -> String {
-   
+
     let final_icon =  match icon {
         1..=5 => ":soleado:",
         6 => ":casi_todo_soleado:",
@@ -188,5 +222,20 @@ mod test{
         let path = String::from("/what/is/this/route");
         let result = get_list(&path);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn check_path() {
+        let now: DateTime<Utc> = Utc::now();
+        let mut path = "share/".to_owned();
+            path.push_str(&now.format("%Y").to_string());
+            path.push_str("/");
+            path.push_str(&now.format("%a").to_string());
+            path.push_str("/");
+            path.push_str(&now.format("%d").to_string());
+            path.push_str("/");
+            path.push_str(".json");
+        
+        println!("{}", path.to_string());
     }
 }
