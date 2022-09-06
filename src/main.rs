@@ -96,7 +96,7 @@ async fn main() {
             let mut path = "share/".to_owned();
             path.push_str(&now.format("%Y").to_string());
             path.push_str("/");
-            path.push_str(&now.format("%a").to_string());
+            path.push_str(&now.format("%m").to_string());
             path.push_str("/");
             path.push_str(&now.format("%d").to_string());
             path.push_str("/");
